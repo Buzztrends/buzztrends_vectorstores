@@ -22,7 +22,7 @@ class Writer:
         """
         self.__client.create_collection(name=collection_name,embedding_function=self.__embedding_function,metadata=meta_data)
 
-    def update(self,collection_name:str,docs:list[dict],meta_data=None) -> None:
+    def update(self,collection_name:str,docs:list[str],meta_data=None) -> None:
         """
         Add the provided documents to the given collection.
         Args:
@@ -54,7 +54,3 @@ class Writer:
             return False
         else:
             return True
-        
-if __name__ == "__main__":
-    w = Writer(host="localhost",port=8000,openai_api_key="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")
-    w.delete("test")

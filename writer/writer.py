@@ -54,3 +54,8 @@ class Writer:
             return False
         else:
             return True
+        
+if __name__ == "__main__":
+    w = Writer(host="localhost",port=8000,openai_api_key="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")
+    # w.create(collection_name="my_test")
+    w.update("my_test",docs=["This is for demo"],meta_data=[{"title":"Demo"}])

@@ -1,6 +1,7 @@
 import chromadb
 import uuid
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
+
 class Writer:
     def __init__(self,host:str,port:int,openai_api_key:str) -> None:
         self.__client = chromadb.HttpClient(host=host,port=port)

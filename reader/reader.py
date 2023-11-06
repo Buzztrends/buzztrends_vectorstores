@@ -1,4 +1,3 @@
-from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from chromadb import HttpClient
 from langchain.vectorstores.chroma import Chroma
 from langchain.embeddings import OpenAIEmbeddings
@@ -6,7 +5,7 @@ import os
 
 class Reader:
     def __init__(self,host:str, port:int,collection:str,openai_api_key:str) -> None:
-        self.__embedding_function = OpenAIEmbeddingFunction(api_key=openai_api_key,model_name="text-embedding-ada-002")
+
         try:
             __client = HttpClient(host=host,port=port)
         except ValueError:

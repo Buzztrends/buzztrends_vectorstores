@@ -1,3 +1,4 @@
-openai
-chromadb
-langchain
+openai==0.28.1
+chromadb=0.4.15
+chromadb-hnswlib==0.7.3
+langchain==0.0.323

@@ -1,6 +1,8 @@
 from langchain.vectorstores.chroma import Chroma
 import chromadb
 from chromadb.utils import embedding_functions
+import os
+
 """
 How to use client vector store in langchain?
 Step 1: create a client using "chromadb" client. Here we are using HttpClient for client-server Architecture.
@@ -8,7 +10,7 @@ Step 1: create a client using "chromadb" client. Here we are using HttpClient fo
 Step 2: Use the client in "langchain.vectorstores" for retrieval
 """
 embedding_function = embedding_functions.OpenAIEmbeddingFunction(
-                api_key="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",
+                api_key=os.environ["OPENAI_API_KEY"],
                 model_name="text-embedding-ada-002"
             )
 

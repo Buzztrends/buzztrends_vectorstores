@@ -1,6 +1,7 @@
 import chromadb
 import uuid
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
+import os
 
 class Writer:
     def __init__(self,host:str,port:int,openai_api_key:str) -> None:
@@ -57,6 +58,6 @@ class Writer:
             return True
         
 if __name__ == "__main__":
-    w = Writer(host="localhost",port=8000,openai_api_key="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")
+    w = Writer(host="localhost",port=8000,openai_api_key=os.environ["OPENAI_API_KEY"])
     # w.create(collection_name="my_test")
     w.update("my_test",docs=["This is for demo"],meta_data=[{"title":"Demo"}])

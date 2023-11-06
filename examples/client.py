@@ -1,10 +1,12 @@
 import chromadb
 from chromadb.utils import embedding_functions
 from langchain.embeddings import OpenAIEmbeddings
+import os
+
 
 # FOR CLIENT CREATION USING HTTP CLIENT
 openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-                api_key="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",
+                api_key=os.environ["OPENAI_API_KEY"],
                 model_name="text-embedding-ada-002"
             )
 

@@ -2,6 +2,7 @@ from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from chromadb import HttpClient
 from langchain.vectorstores.chroma import Chroma
 from langchain.embeddings import OpenAIEmbeddings
+import os
 
 class Reader:
     def __init__(self,host:str, port:int,collection:str,openai_api_key:str) -> None:
@@ -17,5 +18,5 @@ class Reader:
         return self.retriever.search(query=query,search_type="similarity")
     
 if __name__ == "__main__":
-    r = Reader(host="localhost",port=8000,collection="my_test",openai_api_key="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")
+    r = Reader(host="localhost",port=8000,collection="my_test",openai_api_key=os.environ["OPENAI_API_KEY"])
     print(r.search("demo"))

@@ -1,3 +1,4 @@
 openai==0.28.1
 chromadb==0.4.15
 langchain==0.0.323
+pymongo==4.6.0

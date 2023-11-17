@@ -36,7 +36,7 @@ Root
     "url": <string>,
     "source": <string>,
     "topic": <string>,
-    "validation": <string or None>,
+    "validation": <validation datamodel>,
     "hashtags": [<list of strings>] or None
 }
 ```
@@ -54,27 +54,44 @@ post data model:
 # User Datamodel
 ```
 {
-    <id>: {
-        "company_id": <int>,
-        "company_name": <string>,
-        "username": <string>,
-        "password": <hashed string>,
-        "company_description": <string>,
-        "content_category": <string>,
-        "country": <string>,
-        "country_code": <string>
-        "moments": {
-            "vectorstore_collection_id": <int>,
-            "general_news": [<list of moments>],
-            "industry_news": [<list of moments>],
-            "current_events": [<list of moments>],
-            "social_media": [<list of moments>]
-        },
-        "saved_items": [<list of moments>],
-        "last_5_generations": [<list of posts>]
-    }
+    "company_id": <int>,
+    "company_name": <string>,
+    "username": <string>,
+    "password": <hashed string>,
+    "company_description": <string>,
+    "content_category": <string>,
+    "country": <string>,
+    "country_code": <string>
+    "moments": {
+        "vectorstore_collection_id": <int>,
+        "general_news": [<list of moments>],
+        "industry_news": [<list of moments>],
+        "current_events": [<list of moments>],
+        "social_media": [<list of moments>]
+    },
+    "saved_items": [<list of moments>],
+    "last_5_generations": [<list of posts>]
 }
 ```
+
+# Validation Datamodel
+```
+{
+    "google_trends": {
+        "raw_data":[{<date>:<int>}, ....], # use this to create a line chart
+        "keywords":[<list of string>] # use this to embed the google trends chart (preffered)
+    } or None, 
+    "hashtags": [{<hashtag>:<int>}, ...] or None # use this to create a sun chart
+}
+```
+
+<b>
+
+* _"google_trends"_ is only returned in case of general news and industry news
+
+* _"hashtag"_ is only returned in case of social media
+
+</b>
 
 # Payload Structure
 
@@ -98,28 +115,32 @@ https://<url>/text_generation/moments
 {
     "general_news": [{
         "title": <string>,
+        "description": <string>,
         "url":<string>,
+        "card_text": <string>,
         "source": <string>,
-        "topic": <string>,
-        "validation": <string or None>
+        "top_image": <string>,
+        "validation": <validation datamodel>
     }, ... ],
     "industry_news": [{
         "title": <string>,
+        "description": <string>,
         "url":<string>,
+        "card_text": <string>,
         "source": <string>,
-        "topic": <string>,
-        "validation": <string or None>    
+        "top_image": <string>,
+        "validation": <validation datamodel>
     }, ... ]
     "current_events": [{
         "event_name": <string>,
         "topic": <string>,
-        "validation": <string or None>
+        "validation": <validation datamodel>
     }, ... ],
     "social_media_trends": [{
         "title": <string>,
         "hashtags": [<list of strings>],
-        "validation": <string or None>
-    }],
+        "validation": <validation datamodel>
+    }]
 }
 ```
 

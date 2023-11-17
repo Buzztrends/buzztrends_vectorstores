@@ -9,3 +9,5 @@ food
 music
 beauty
 fashion
+religious festivals
+festivals

@@ -14,6 +14,12 @@ import newspaper
 import requests
 import pandas as pd
 
+
+def divide_chunks(l, n):
+    for i in range(0, len(l), n): 
+        yield l[i:i + n]
+
+
 def extract_text_from(url):
     print("Getting text:", url)
     html = requests.get(url, headers={"user-agent": "something"}).text
@@ -112,13 +118,30 @@ def parse_news_url(url:str)->Article:
     Raises:
         - newspaper.ArticleException
     """
-    article = Article(url=url)
-    article.download()
-    article.parse()
+    try:
+        article = Article(url=url)
+        article.download()
+        article.parse()
 
-    return article
+        return article
+    
+    except newspaper.ArticleException as e:
 
-def parse_articles(urls:list)->list[Article]:
+        return None
+
+def parse_for_current_events(_in)->dict:
+    url, country_code = _in
+    article = parse_news_url(url)
+
+    if not article:
+        return None
+    
+    return {
+            "source": article.title, 
+            "text": article.text,
+            "country_code": country_code}
+
+def parse_multiple_news_urls(urls:list)->list[Article]:
     """
     Parse the articles for the given URL and convert them to newspaper3k.Article object
 
@@ -130,12 +153,11 @@ def parse_articles(urls:list)->list[Article]:
         - List of Artcile Objects
     """
     articles = []
-    for i,url in enumerate(urls):
-        try:
-            article = parse_news_url(url)
-            print("GET:", url)
+
+    for item in urls:
+        article = parse_news_url(item)
+
+        if article:
             articles.append(article)
-        except newspaper.ArticleException as e:
-            print("FAIL:", url)
     
     return tuple(articles)

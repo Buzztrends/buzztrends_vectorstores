@@ -7,7 +7,7 @@ class Writer:
     def __init__(self,host:str,port:int,openai_api_key:str) -> None:
         self.__client = chromadb.HttpClient(host=host,port=port)
         self.__embedding_function = OpenAIEmbeddingFunction(api_key=openai_api_key)
-    def create(self,collection_name:str,meta_data=None) -> None:
+    def create_collection(self,collection_name:str,meta_data=None) -> None:
         """
         Create a new collection with the given name.
 
@@ -41,7 +41,7 @@ class Writer:
         temp_collection = self.__client.get_collection(name=collection_name,embedding_function= self.__embedding_function)
         temp_collection.add(ids=[str(uuid.uuid1()) for _ in range(len(docs))],documents=docs,metadatas=meta_data)
 
-    def delete(self,collection_name:str) -> bool:
+    def delete_collection(self,collection_name:str) -> bool:
         """
         Deletes the collection with the provided collection name. It returns "True" if the deletion is successful else it returns "False".
         Args:
@@ -56,7 +56,12 @@ class Writer:
             return False
         else:
             return True
-        
+    
+    def delete_entries(self, collection_name:str, where:dict=None, where_document:dict=None) -> bool:
+        collection = self.__client.get_collection(collection_name)
+        collection.delete(where=where, where_document=where_document)
+    
+
 if __name__ == "__main__":
     w = Writer(host="localhost",port=8000,openai_api_key=os.environ["OPENAI_API_KEY"])
     # w.create(collection_name="my_test")

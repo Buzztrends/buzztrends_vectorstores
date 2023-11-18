@@ -209,6 +209,3 @@ def best_hashtag_get_popular(query:str):
         data.append([ele for ele in cols if ele])
     
     return process_data(data)
-
-def get_best_hashtags_data(hashtag:str) -> dict[dict]:
-    pass

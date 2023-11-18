@@ -1,4 +1,4 @@
-from googlesearch import search
+# from googlesearch import search
 from newspaper import Article
 from googleapiclient.discovery import build
 from tqdm import tqdm
@@ -162,6 +162,53 @@ def parse_multiple_news_urls(urls:list)->list[Article]:
     
     return tuple(articles)
 
+def process_data(data):
+    if data[0] == []:
+        data = data[1:]
+
+    for i in range(len(data)):
+        data[i][2] = int(data[i][2].replace(",", ""))
+
+    return_dict = {}
+    for i in range(len(data)):
+        return_dict[data[i][1]] = return_dict[i][2]
+    return return_dict
+
+def best_hashtag_get_popular(query:str):
+    """
+    Scrape popular hashtags from best hashtags
+
+    Args:
+        query:str, query to search hash tags
+    
+    Return:
+        dict[list]= keys = [table,hashtags]
+
+    """
+    print("[GET] Popular hashtags")
+    query= query.lower()
+    query = query.replace(" ", "")
+    try:
+        url = f"http://best-hashtags.com/hashtag/{query}"
+    except Exception as e:
+        print("[FAILED] Popular hashtags")
+        return {"hashtags":[],"table":[]}
+    
+    resp = requests.get(url)
+    soup = bs4.BeautifulSoup(resp.text,"lxml")
+    popualr = soup.find("div",dict(id="popular"))
+    if popualr is None:
+        print("No data in popular")
+        return []
+
+    data = []
+    rows = popualr.find_all('tr')
+    for row in rows:
+        cols = row.find_all('td')
+        cols = [ele.text.strip() for ele in cols]
+        data.append([ele for ele in cols if ele])
+    
+    return process_data(data)
 
 def get_best_hashtags_data(hashtag:str) -> dict[dict]:
     pass

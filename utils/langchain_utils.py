@@ -175,7 +175,7 @@ and so on
             "title": title,
             "reason": reason,
             "validation": {
-                "hashtag": hashtag # add best-hashtags function
+                "hashtag": best_hashtag_get_popular(hashtag) # add best-hashtags function
             }
         })
 

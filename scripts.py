@@ -220,13 +220,22 @@ def get_current_events():
                 chroma_writer.update(collection_name, documents, metadata)
 
 if __name__ == "__main__":
-    # environment setup
-    with open(".env", "r") as key_file:
-        keys = list(key_file)
+    try:
+        # environment setup
+        with open(".env", "r") as key_file:
+            keys = list(key_file)
 
-    for item in keys:
-        variable, value = item.split("=")[0], "=".join(item.split("=")[1:])
-        os.environ[variable] = value.replace("\n", "")
+        for item in keys:
+            variable, value = item.split("=")[0], "=".join(item.split("=")[1:])
+            os.environ[variable] = value.replace("\n", "")
+    except:
+        print("no .env file found")
+
+        if "CHROMA_IP" in os.environ:
+            print("environment seems to be updated")
+        else:
+            print("Environment not setup properly")
+            exit(1)
 
     # connect to MongoDB endpoint
     user_mongo_client = MongoInterface(

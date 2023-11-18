@@ -161,3 +161,7 @@ def parse_multiple_news_urls(urls:list)->list[Article]:
             articles.append(article)
     
     return tuple(articles)
+
+
+def get_best_hashtags_data(hashtag:str) -> dict[dict]:
+    pass

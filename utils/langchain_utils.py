@@ -50,6 +50,28 @@ def build_splited_docs(sitetexts: list[dict], target_key:str="text"):
 
     return docs, metadatas
 
+
+def split_df(df:pd.DataFrame, target:str) -> tuple[list[str], list[dict]]:
+    texts = df[target].values
+
+    meta_columns = df.columns.to_list()
+    meta_columns.remove(target)
+
+    meta_df = df[meta_columns]
+
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ".", ",", "\n"])
+
+    documents, metadata = [], []
+
+    for i, item in enumerate(texts):
+        splits = text_splitter.split_text(item)
+        documents.extend(splits)
+        metadata.extend([meta_df.iloc[i].to_dict()] * len(splits))
+
+    return documents, metadata
+
+
+
 # -------------MODEL INTERACTIONS-----------------------
 def get_model(model_name='gpt-3', temperature=0.7):
     return ChatOpenAI(model=MODELS[model_name], temperature=temperature)
@@ -153,7 +175,7 @@ and so on
             "title": title,
             "reason": reason,
             "validation": {
-                "hashtag": hashtag
+                "hashtag": hashtag # add best-hashtags function
             }
         })
 
@@ -164,10 +186,10 @@ def generate_current_events(chroma_reader:Reader, topic_list:list[str], country_
 
     query = f"List 10 important and interesting events related to any of these topics: {','.join(topic_list)}."
 
-    relevant_docs = chroma_reader.search(query, 30, {"country"})
+    relevant_docs = chroma_reader.search(query, 30, {"country_": country_code})
     relevant_docs_text = "\n".join([item.page_content.replace("\n", " ") for item in relevant_docs])
 
-    template = """Given the following context, I want you to answer this: {query}. 
+    template = """Given the following context, I want you to answer this: {query}. Today's date {date}
 
 Context:
 {context}
@@ -188,11 +210,12 @@ Instructions:
 8. Do not repeat ideas. 
 """
 
-    prompt = PromptTemplate(template=template, input_variables=["query", "context"])
+    prompt = PromptTemplate(template=template, input_variables=["query", "context", "date"])
     chain = LLMChain(prompt=prompt, llm=get_model(llm_name, temperature=0.2), output_key="events")
 
     output = chain({ 
         "query": query,
+        "date": current_date(),
         "context": relevant_docs_text
     })["events"]
 

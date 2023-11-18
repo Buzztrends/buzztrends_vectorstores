@@ -1,10 +1,15 @@
 import chromadb
+import requests
 import uuid
+
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 import os
 
 class Writer:
     def __init__(self,host:str,port:int,openai_api_key:str) -> None:
+        self.host = host
+        self.port = port
+        self.openai_api_key = openai_api_key
         self.__client = chromadb.HttpClient(host=host,port=port)
         self.__embedding_function = OpenAIEmbeddingFunction(api_key=openai_api_key)
     def create_collection(self,collection_name:str,meta_data=None) -> None:
@@ -24,7 +29,7 @@ class Writer:
         """
         self.__client.create_collection(name=collection_name,embedding_function=self.__embedding_function,metadata=meta_data)
 
-    def update(self,collection_name:str,docs:list[str],meta_data=None) -> None:
+    def update(self,collection_name:str,docs:list[str],meta_data=None,max_retries=3) -> None:
         """
         Add the provided documents to the given collection.
         Args:
@@ -38,8 +43,17 @@ class Writer:
             - ValueError, if collection doesn't exists.
         """
 
-        temp_collection = self.__client.get_collection(name=collection_name,embedding_function= self.__embedding_function)
-        temp_collection.add(ids=[str(uuid.uuid1()) for _ in range(len(docs))],documents=docs,metadatas=meta_data)
+        count = 0
+        while count<max_retries:
+            try:
+                temp_collection = self.__client.get_collection(name=collection_name,embedding_function= self.__embedding_function)
+                temp_collection.add(ids=[str(uuid.uuid1()) for _ in range(len(docs))],documents=docs,metadatas=meta_data)
+                return
+            except requests.exceptions.ConnectTimeout:
+                print("Chroma connection timed out, retrying")
+                self.__client = chromadb.HttpClient(host=self.host,port=self.port)
+                self.__embedding_function = OpenAIEmbeddingFunction(api_key=self.openai_api_key)
+                count += 1
 
     def delete_collection(self,collection_name:str) -> bool:
         """

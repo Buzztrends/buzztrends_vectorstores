@@ -18,7 +18,7 @@ import pandas as pd
 
 
 def get_metadata(article:Article) -> tuple[str,str,str,str]:
-    img_url, keywords, card_text, description = "", "", "", ""
+    img_url, keywords, card_text, description, text = "", "", "", "", ""
 
     try:
         img_url = article.top_image
@@ -40,7 +40,12 @@ def get_metadata(article:Article) -> tuple[str,str,str,str]:
     except:
         pass
 
-    return img_url, keywords, card_text, description 
+    try:
+        text = article.text
+    except:
+        pass
+
+    return img_url, keywords, card_text, description, text
     
 
 
@@ -68,7 +73,7 @@ def get_news_by_topic(topic, country="US", lang="en", limit=70):
         
         try:
             article = parse_news_url(item["link"])
-            img_url, keywords, card_text, description = get_metadata(article)
+            img_url, keywords, card_text, description, text = get_metadata(article)
         except:
             pass
 
@@ -77,6 +82,7 @@ def get_news_by_topic(topic, country="US", lang="en", limit=70):
             pd.DataFrame({
                 'title': item['title'],
                 "description": description,
+                "text": text,
                 'url': item['link'],
                 'source_href': item["source"]["href"],
                 'source': item['source']['title'],
@@ -113,7 +119,8 @@ def get_news_by_search(query, country="US", lang='en', limit=50):
         
         try:
             article = parse_news_url(item["link"])
-            img_url, keywords, card_text, description = get_metadata(article)
+            img_url, keywords, card_text, description, text = get_metadata(article)
+           
         except:
             pass
 
@@ -123,6 +130,7 @@ def get_news_by_search(query, country="US", lang='en', limit=50):
                 'title': item['title'],
                 "description": description,
                 'url': item['link'],
+                "text": text,
                 'source_href': item["source"]["href"],
                 'source': item['source']['title'],
                 'top_image': img_url,

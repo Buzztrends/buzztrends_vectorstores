@@ -24,7 +24,8 @@ for name, code in zip(COUNTRY_NAMES, read_lines_from_file("./config/countries-co
     COUNTRY_CODES[name] = code
 
 def update_user_moments(user):
-    
+    global QUERY_TOPICS
+
     lang="en"
 
     company_id = user["company_id"]
@@ -112,7 +113,7 @@ def update_user_moments(user):
 
     chroma_reader.set_collection(collection_name)
 
-    current_events_moments = generate_current_events(chroma_reader)
+    current_events_moments = generate_current_events(chroma_reader, QUERY_TOPICS, country_code)
 
     print({
         "general_news": general_news_moments,
@@ -122,9 +123,9 @@ def update_user_moments(user):
     })
 
     mongo_client.update_user_moments(company_id,{
-        "general_news": general_news_moments,
-        "industry_news": industry_news_moments,
-        "current_events": current_events_moments,
+        "General News": general_news_moments,
+        "Industry News": industry_news_moments,
+        "Current Events": current_events_moments,
         "social_media_trends": social_media_moments
     })
 
@@ -160,12 +161,35 @@ def get_general_news_data():
             documents, metadata = load_df(news_df)
 
             # embed and push vectors to chroma
+            chroma_reader, chroma_writer = get_reader_writer(
+                host=os.environ["CHROMA_IP"],
+                port=int(os.environ["CHROMA_PORT"]),
+                openai_api_key=os.environ["OPENAI_API_KEY"],
+                reader_collection_name=collection_name
+            )
             chroma_writer.update(collection_name, documents, metadata)
+
+def prepare_data(data):
+    topic, target, country_code = data
+    
+    news_df = get_news_by_search(f"upcoming or ongoing major events about {topic}", limit=50, country=country_code)
+
+    # Simple filter for where text does not exist
+    news_df = news_df[(news_df[target].isna() == False)]
+    news_df["country_code"] = [country_code] * len(news_df)
+
+    # parse dataframe into documents and metadata
+    documents, metadata = split_df(news_df, target)
+
+    # embed and push vectors to chroma
+    return documents, metadata
 
 def get_current_events():
     global QUERY_TOPICS, COUNTRY_CODES
 
+
     collection_name = "current_events"
+    target = "text"
 
     chroma_reader, chroma_writer = get_reader_writer(
         host=os.environ["CHROMA_IP"],
@@ -179,21 +203,21 @@ def get_current_events():
     data = []
 
     # for every country in the configuration run data extraction on all topics
-    for country_name, country_code in COUNTRY_CODES.items():
-    
-        # get links for all the topics
-        for topic in QUERY_TOPICS:
-            news_df = get_news_by_search(f"upcoming or ongoing major events about {topic}", limit=50, country=country_code)
+    with Pool(5) as pool:
+        for country_name, country_code in COUNTRY_CODES.items():
+            
+            docs_and_meta = pool.imap(prepare_data, [(topic, target, country_code) for topic in QUERY_TOPICS])
+            # get links for all the topics
+            for documents, metadata in docs_and_meta:
 
-            # Simple filter for where image or keywords do not exist
-            news_df = news_df[(news_df["top_image"] != "") & (news_df["keywords"] != "")]
-            news_df["country_code"] = [country_code] * len(news_df)
-
-            # parse dataframe into documents and metadata
-            documents, metadata = load_df(news_df, page_content_column="description")
-
-            # embed and push vectors to chroma
-            chroma_writer.update(collection_name, documents, metadata)
+                # embed and push vectors to chroma
+                chroma_reader, chroma_writer = get_reader_writer(
+                    host=os.environ["CHROMA_IP"],
+                    port=int(os.environ["CHROMA_PORT"]),
+                    openai_api_key=os.environ["OPENAI_API_KEY"],
+                    reader_collection_name=collection_name
+                )
+                chroma_writer.update(collection_name, documents, metadata)
 
 if __name__ == "__main__":
     # environment setup

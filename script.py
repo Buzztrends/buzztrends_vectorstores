@@ -30,6 +30,8 @@ for name, code in zip(COUNTRY_NAMES, read_lines_from_file("./config/countries-co
 def update_user_moments(user):
     global QUERY_TOPICS
 
+    news_limit = int(os.environ["NEWS_DATA_LIMIT"])
+
     lang="en"
 
     company_id = user["company_id"]
@@ -75,7 +77,7 @@ def update_user_moments(user):
     for docs, metadata in zip(chunked_docs, chunked_metadata):
         chroma_writer.update(collection_name, docs, metadata)
 
-    industry_news_moments = filter_news(content_category + "|" + company_description, chroma_reader)
+    industry_news_moments = filter_news(content_category + "|" + company_description, chroma_reader)[:news_limit]
 
     # 2: Create social media moments
     collection_name = f"{company_id}_social_media"
@@ -92,7 +94,7 @@ def update_user_moments(user):
     articles_data = [{"source": item.title, "text": item.text} for item in articles if item is not None]
 
     # split documents and create metadata for every document
-    docs, metadata = build_splited_docs(articles_data)   
+    docs, metadata = build_splited_docs(articles_data)
 
     chunked_docs = divide_chunks(docs, 1000)
     chunked_metadata = divide_chunks(metadata, 1000)
@@ -110,7 +112,7 @@ def update_user_moments(user):
     collection_name = "general_news"
     chroma_reader.set_collection(collection_name)
 
-    general_news_moments = filter_news(content_category + "|" + company_description, chroma_reader)
+    general_news_moments = filter_news(content_category + "|" + company_description, chroma_reader)[:news_limit]
 
     # 4: Current events moments
     collection_name = "current_events"

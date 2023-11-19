@@ -13,7 +13,7 @@ from newspaper import Article
 import newspaper
 import requests
 import pandas as pd
-
+import bs4
 
 def divide_chunks(l, n):
     for i in range(0, len(l), n): 

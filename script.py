@@ -272,4 +272,6 @@ if __name__ == "__main__":
             print("Environment not setup properly")
             exit(1)
 
+    job()
+    
     sched.start()

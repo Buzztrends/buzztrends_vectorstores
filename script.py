@@ -1,3 +1,5 @@
+from apscheduler.schedulers.blocking import BlockingScheduler
+
 from utils.simple_utils import *
 from utils.google_utils import *
 from utils.langchain_utils import *
@@ -13,6 +15,8 @@ from multiprocessing import Process, Pool
 import multiprocessing
 import os
 import time
+
+sched = BlockingScheduler()
 
 
 # Constants
@@ -219,6 +223,37 @@ def get_current_events():
                 )
                 chroma_writer.update(collection_name, documents, metadata)
 
+@sched.scheduled_job('cron', second="0", minute="0", hour="*/6", month="*", day="*", year="*")
+def job():
+    # connect to MongoDB endpoint
+    user_mongo_client = MongoInterface(
+        url=os.environ["MONGO_CONNECTION_STRING"],
+        database="users",
+        collection="user-data"
+    )
+
+    # Common data, General news and current affairs
+    # 1: General Dataset extraction
+
+    # Start a branching process for general news extraction
+    print("Starting general news extraction process")
+    general_news_process = Process(target=get_general_news_data, args=())
+    general_news_process.start()
+
+    # 2: Current events
+    print("Starting current events extraction process")
+    get_current_events()
+
+    # Wait for both processes to finish before proceeding
+    general_news_process.join()
+
+
+    # Create personalized industry news for every user
+    userlist = user_mongo_client.get_user_list()
+
+    with Pool(5) as pool:
+        [item for item in pool.imap(update_user_moments, userlist)]
+
 if __name__ == "__main__":
     try:
         # environment setup
@@ -237,31 +272,4 @@ if __name__ == "__main__":
             print("Environment not setup properly")
             exit(1)
 
-    # connect to MongoDB endpoint
-    user_mongo_client = MongoInterface(
-        url=os.environ["MONGO_CONNECTION_STRING"],
-        database="users",
-        collection="user-data"
-    )
-
-    # Common data, General news and current affairs
-    # 1: General Dataset extraction
-
-    # Start a branching process for general news extraction
-    print("Starting general news extraction process")
-    general_news_process = Process(target=get_general_news_data, args=())
-    general_news_process.start()
-
-    # # 2: Current events
-    print("Starting current events extraction process")
-    get_current_events()
-
-    # # Wait for both processes to finish before proceeding
-    general_news_process.join()
-
-
-    # Create personalized industry news for every user
-    userlist = user_mongo_client.get_user_list()
-
-    with Pool(5) as pool:
-        [item for item in pool.imap(update_user_moments, userlist)]
+    sched.start()

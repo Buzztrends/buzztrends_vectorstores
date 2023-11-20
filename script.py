@@ -245,11 +245,11 @@ def job():
     # 2: Current events
     print("Starting current events extraction process")
     get_current_events()
-
+    
     # Wait for both processes to finish before proceeding
     general_news_process.join()
 
-
+    print("Updating user moments")
     # Create personalized industry news for every user
     userlist = user_mongo_client.get_user_list()
 

@@ -119,7 +119,7 @@ def update_user_moments(user):
 
     chroma_reader.set_collection(collection_name)
 
-    current_events_moments = generate_current_events(chroma_reader, QUERY_TOPICS, country_code)
+    current_events_moments = generate_current_events(chroma_reader, QUERY_TOPICS, country_code)[:5]
 
     print({
         "general_news": general_news_moments,

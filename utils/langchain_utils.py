@@ -239,9 +239,7 @@ Instructions:
         data.append({
             "event_name": title,
             "validation": {
-                "google_trends": {
-                    "keywords": [title]
-                }
+                "google_trends": [title]
             },
             "topic": topic
         })

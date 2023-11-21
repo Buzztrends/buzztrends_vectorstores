@@ -65,6 +65,7 @@ def split_df(df:pd.DataFrame, target:str) -> tuple[list[str], list[dict]]:
 
     for i, item in enumerate(texts):
         splits = text_splitter.split_text(item)
+        splits = set(splits)
         documents.extend(splits)
         metadata.extend([meta_df.iloc[i].to_dict()] * len(splits))
 

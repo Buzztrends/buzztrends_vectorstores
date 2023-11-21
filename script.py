@@ -15,6 +15,9 @@ from multiprocessing import Process, Pool
 import multiprocessing
 import os
 import time
+import pickle as pkl
+import pandas as pd
+import numpy as np
 
 sched = BlockingScheduler()
 
@@ -119,7 +122,7 @@ def update_user_moments(user):
 
     chroma_reader.set_collection(collection_name)
 
-    current_events_moments = generate_current_events(chroma_reader, QUERY_TOPICS, country_code)[:5]
+    current_events_moments = generate_current_events(chroma_reader, QUERY_TOPICS, country_code)[:news_limit]
 
     print({
         "general_news": general_news_moments,
@@ -185,6 +188,7 @@ def prepare_data(data):
     news_df["country_code"] = [country_code] * len(news_df)
 
     # parse dataframe into documents and metadata
+    news_df["country_code"] = [country_code] * len(news_df)
     documents, metadata = split_df(news_df, target)
 
     # embed and push vectors to chroma
@@ -212,19 +216,45 @@ def get_current_events():
     with Pool(5) as pool:
         for country_name, country_code in COUNTRY_CODES.items():
             
-            docs_and_meta = pool.imap(prepare_data, [(topic, target, country_code) for topic in QUERY_TOPICS])
+            # docs_and_meta = pool.map(prepare_data, [(topic, target, country_code) for topic in QUERY_TOPICS])
+
+            docs_and_meta = pkl.load(open("test.pkl", "rb"))
+
             # get links for all the topics
-            for documents, metadata in docs_and_meta:
+            documents = []
+            metadata = []
+            ids = []
 
-                # embed and push vectors to chroma
-                chroma_reader, chroma_writer = get_reader_writer(
-                    host=os.environ["CHROMA_IP"],
-                    port=int(os.environ["CHROMA_PORT"]),
-                    openai_api_key=os.environ["OPENAI_API_KEY"],
-                    reader_collection_name=collection_name
-                )
-                chroma_writer.update(collection_name, documents, metadata)
+            for temp_data in docs_and_meta:
+                data = np.array(temp_data, dtype=object).T
 
+                ids.extend(list(map(lambda x: get_id(str(x[0])+str(x[1])), data)))
+                documents.extend(list(data.T[0]))
+                metadata.extend(list(data.T[1]))
+
+            temp = pd.DataFrame({
+                "ids": ids,
+                "documents": documents,
+                "metadata": metadata
+            })
+
+            print("Total documents:", len(temp))
+            temp.drop_duplicates("ids", inplace=True)
+            print("Total documents after removing duplicates:", len(temp))
+            
+            ids = temp["ids"].to_list()
+            documents = temp["documents"].to_list()
+            metadata = temp["metadata"].to_list()
+
+            chunked_ids = divide_chunks(ids, 1000)
+            chunked_documents = divide_chunks(documents, 1000)
+            chunked_metadata = divide_chunks(metadata, 1000)
+
+            # embed and push vectors to chroma
+            for ids, documents, metadata in zip(chunked_ids, chunked_documents, chunked_metadata):
+                chroma_writer.update(collection_name, documents, metadata, ids=ids)
+
+            exit(1)
 @sched.scheduled_job('cron', second="0", minute="0", hour="*/6", month="*", day="*", year="*")
 def job():
     # connect to MongoDB endpoint

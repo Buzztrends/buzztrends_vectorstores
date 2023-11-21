@@ -8,6 +8,8 @@ from chroma_interface import *
 from chroma_interface.reader import Reader
 from chroma_interface.writer import Writer
 
+from script import *
+
 import os
 import time
 # Constants
@@ -46,7 +48,6 @@ user_mongo_client = MongoInterface(
     collection="user-data"
 )
 
-from scripts import *
 
 if __name__ == "__main__":
     get_current_events()

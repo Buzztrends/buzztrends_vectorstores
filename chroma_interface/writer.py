@@ -1,9 +1,15 @@
 import chromadb
 import requests
 import uuid
+import pandas as pd
 
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
+from ..utils.simple_utils import divide_chunks
+
 import os
+
+def get_id(_str):
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, str(_str)))
 
 class Writer:
     def __init__(self,host:str,port:int,openai_api_key:str) -> None:
@@ -29,7 +35,7 @@ class Writer:
         """
         self.__client.create_collection(name=collection_name,embedding_function=self.__embedding_function,metadata=meta_data)
 
-    def update(self,collection_name:str,docs:list[str],meta_data=None,max_retries=3) -> None:
+    def update(self,collection_name:str,documents:list[str],metadata=None,max_retries=3,ids=None,filter_duplicates=True) -> None:
         """
         Add the provided documents to the given collection.
         Args:
@@ -43,17 +49,46 @@ class Writer:
             - ValueError, if collection doesn't exists.
         """
 
+
         count = 0
+
+        if ids == None:
+            ids = [get_id(str(d) + str(m)) for d, m in zip(documents, metadata)]
+
+        if filter_duplicates:
+            temp = pd.DataFrame({
+                "ids": ids,
+                "documents": documents,
+                "metadata": metadata
+            })
+
+            temp.drop_duplicates("documents", inplace=True)
+            ids = temp["ids"].to_list()
+            documents = temp["documents"].to_list()
+            metadata = temp["metadata"].to_list()
+        
+        print(f"Pushing {len(documents)} to chromadb")
+
         while count<max_retries:
             try:
                 temp_collection = self.__client.get_collection(name=collection_name,embedding_function= self.__embedding_function)
-                temp_collection.add(ids=[str(uuid.uuid1()) for _ in range(len(docs))],documents=docs,metadatas=meta_data)
+
+                chunked_ids = divide_chunks(ids, 1000)
+                chunked_documents = divide_chunks(documents, 1000)
+                chunked_metadata = divide_chunks(metadata, 1000)
+
+                for ids, documents, metadata in zip(chunked_ids, chunked_documents, chunked_metadata):
+                    temp_collection.add(ids=ids,documents=documents,metadatas=metadata)
                 return
+            
             except requests.exceptions.ConnectTimeout:
                 print("Chroma connection timed out, retrying")
                 self.__client = chromadb.HttpClient(host=self.host,port=self.port)
                 self.__embedding_function = OpenAIEmbeddingFunction(api_key=self.openai_api_key)
                 count += 1
+
+            except chromadb.errors.DuplicateIDError:
+                print("Duplicate entry found")
 
     def delete_collection(self,collection_name:str) -> bool:
         """

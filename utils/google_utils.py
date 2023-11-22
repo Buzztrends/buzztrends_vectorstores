@@ -17,37 +17,6 @@ import os
 import pandas as pd
 
 
-def get_metadata(article:Article) -> tuple[str,str,str,str]:
-    img_url, keywords, card_text, description, text = "", "", "", "", ""
-
-    try:
-        img_url = article.top_image
-    except:
-        pass
-    
-    try:
-        keywords = ",".join(article.meta_keywords)
-    except:
-        pass
-    
-    try:
-        card_text = " ".join(article.text.split()[:20]) + "..."
-    except:
-        pass
-
-    try:
-        description = article.meta_description
-    except:
-        pass
-
-    try:
-        text = article.text
-    except:
-        pass
-
-    return img_url, keywords, card_text, description, text
-    
-
 
 # ----------------- GOOGLE NEWS --------------------
 def get_news_by_topic(topic, country="US", lang="en", limit=70):
@@ -72,8 +41,8 @@ def get_news_by_topic(topic, country="US", lang="en", limit=70):
     for i, item in enumerate(tqdm(topic_heads["entries"][:limit+1], f"Getting headlines for {topic}")):
         
         try:
-            article = parse_news_url(item["link"])
-            img_url, keywords, card_text, description, text = get_metadata(article)
+            article, (img_url, keywords, card_text, description, text) = parse_news_url(item["link"])
+            
         except:
             pass
 
@@ -114,12 +83,13 @@ def get_news_by_search(query, country="US", lang='en', limit=50):
     gn = GoogleNews(lang=lang, country=country)
     topic_heads = gn.search(query)
 
-    for i, item in enumerate(tqdm(topic_heads["entries"][:limit+1], f"Getting headlines for {query}")):
+    print(f"Getting headlines for {query}")
+
+    for i, item in enumerate(tqdm(topic_heads["entries"][:limit+1])):
         img_url, keywords, card_text = "", "", ""
         
         try:
-            article = parse_news_url(item["link"])
-            img_url, keywords, card_text, description, text = get_metadata(article)
+            article, (img_url, keywords, card_text, description, text) = parse_news_url(item["link"])
            
         except:
             pass

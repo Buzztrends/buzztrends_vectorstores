@@ -50,4 +50,9 @@ user_mongo_client = MongoInterface(
 
 
 if __name__ == "__main__":
-    get_current_events()
+    print("Updating user moments")
+    # Create personalized industry news for every user
+    userlist = user_mongo_client.get_user_list()
+
+    with Pool(5) as pool:
+        [item for item in pool.imap(update_user_moments, userlist)]

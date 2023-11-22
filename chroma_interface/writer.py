@@ -71,7 +71,7 @@ class Writer:
             documents = temp["documents"].to_list()
             metadata = temp["metadata"].to_list()
         
-        print(f"Pushing {len(documents)} to chromadb")
+        print(f"Pushing {len(documents)} documents to chromadb")
 
         while count<max_retries:
             try:
@@ -118,4 +118,4 @@ class Writer:
 if __name__ == "__main__":
     w = Writer(host="localhost",port=8000,openai_api_key=os.environ["OPENAI_API_KEY"])
     # w.create(collection_name="my_test")
-    w.update("my_test",docs=["This is for demo"],meta_data=[{"title":"Demo"}])
+    w.update("my_test",documents=["This is for demo"],metadata=[{"title":"Demo"}])

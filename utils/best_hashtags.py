@@ -11,7 +11,7 @@ def process_data(data):
 
     return_dict = {}
     for i in range(len(data)):
-        return_dict[data[i][1]] = return_dict[i][2]
+        return_dict[data[i][1]] = data[i][2]
     return return_dict
 
 def best_hashtag_get_popular(query:str):
@@ -168,6 +168,7 @@ def best_hashtag_get_related(query:str):
 def parse_query(query:str):
     query = query.lower()
     query = query.replace(" ", "")
+    query = query.replace("#", "")
 
     print("parsed hashtag query:", query)
     return query

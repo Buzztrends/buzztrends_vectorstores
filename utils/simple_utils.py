@@ -103,6 +103,36 @@ def read_lines_from_file(path):
     """
     return open(path, 'r').read().split("\n")
 
+def get_metadata(article:Article) -> tuple[str,str,str,str]:
+    img_url, keywords, card_text, description, text = "", "", "", "", ""
+
+    try:
+        img_url = article.top_image
+    except:
+        pass
+    
+    try:
+        keywords = ",".join(article.meta_keywords)
+    except:
+        pass
+    
+    try:
+        card_text = " ".join(article.text.split()[:20]) + "..."
+    except:
+        pass
+
+    try:
+        description = article.meta_description
+    except:
+        pass
+
+    try:
+        text = article.text
+    except:
+        pass
+
+    return img_url, keywords, card_text, description, text
+
 # ---------------NEWSPAPER UTILS--------------
 def parse_news_url(url:str)->Article:
     """
@@ -123,21 +153,21 @@ def parse_news_url(url:str)->Article:
         article.download()
         article.parse()
 
-        return article
+        return article, get_metadata(article)
     
     except newspaper.ArticleException as e:
 
-        return None
+        return None, None
 
 def parse_for_current_events(_in)->dict:
     url, country_code = _in
-    article = parse_news_url(url)
+    article, metadata = parse_news_url(url)
 
     if not article:
         return None
     
     return {
-            "source": article.title, 
+            "source": article.title,
             "text": article.text,
             "country_code": country_code}
 
@@ -155,7 +185,7 @@ def parse_multiple_news_urls(urls:list)->list[Article]:
     articles = []
 
     for item in urls:
-        article = parse_news_url(item)
+        article, metadata = parse_news_url(item)
 
         if article:
             articles.append(article)

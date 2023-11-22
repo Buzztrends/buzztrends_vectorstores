@@ -75,11 +75,7 @@ def update_user_moments(user):
 
     docs, metadata = load_df(news_df)
 
-    chunked_docs = divide_chunks(docs, 1000)
-    chunked_metadata = divide_chunks(metadata, 1000)
-
-    for docs, metadata in zip(chunked_docs, chunked_metadata):
-        chroma_writer.update(collection_name, docs, metadata)
+    chroma_writer.update(collection_name, docs, metadata)
 
     industry_news_moments = filter_news(content_category + "|" + company_description, chroma_reader)[:news_limit]
 
@@ -100,12 +96,7 @@ def update_user_moments(user):
     # split documents and create metadata for every document
     docs, metadata = build_splited_docs(articles_data)
 
-    chunked_docs = divide_chunks(docs, 1000)
-    chunked_metadata = divide_chunks(metadata, 1000)
-
-    # push everything to chromadb
-    for docs, metadata in zip(chunked_docs, chunked_metadata):
-        chroma_writer.update(collection_name, docs, metadata)
+    chroma_writer.update(collection_name, docs, metadata)
 
     social_media_moments = generate_social_media_trends(
         content_category=content_category,

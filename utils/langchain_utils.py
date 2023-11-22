@@ -19,6 +19,7 @@ import re
 
 from .simple_utils import *
 from .google_utils import *
+from .best_hashtags import *
 
 
 from chroma_interface.reader import *
@@ -176,7 +177,7 @@ and so on
             "title": title,
             "reason": reason,
             "validation": {
-                "hashtag": best_hashtag_get_popular(hashtag) # add best-hashtags function
+                "hashtag": get_hashtag_data(hashtag) # add best-hashtags function
             }
         })
 

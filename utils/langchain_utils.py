@@ -184,11 +184,11 @@ and so on
     return data
 
 
-def generate_current_events(chroma_reader:Reader, topic_list:list[str], country_code:str, llm_name:str="gpt-3") -> list[dict]:
+def generate_current_events(company_description:str, chroma_reader:Reader, topic_list:list[str], country_code:str, llm_name:str="gpt-3") -> list[dict]:
 
-    query = f"List 10 important and interesting events related to any of these topics: {','.join(topic_list)}."
+    query = f"List 10 important and interesting events related to any of these topics: {','.join(topic_list)}"
 
-    relevant_docs = chroma_reader.search(query, 30, {"country_": country_code})
+    relevant_docs = chroma_reader.search(query + company_description, 30, {"country_": country_code})
     relevant_docs_text = "\n".join([item.page_content.replace("\n", " ") for item in relevant_docs])
 
     template = """Given the following context, I want you to answer this: {query}. Today's date {date}

@@ -114,7 +114,7 @@ def update_user_moments(user):
 
     chroma_reader.set_collection(collection_name)
 
-    current_events_moments = generate_current_events(chroma_reader, QUERY_TOPICS, country_code)[:news_limit]
+    current_events_moments = generate_current_events(company_description, chroma_reader, QUERY_TOPICS, country_code)[:news_limit]
 
     print({
         "general_news": general_news_moments,

@@ -2,11 +2,15 @@ import chromadb
 import requests
 import uuid
 import pandas as pd
+import os
+
 
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
-from ..utils.simple_utils import divide_chunks
 
-import os
+
+def divide_chunks(l, n):
+    for i in range(0, len(l), n): 
+        yield l[i:i + n]
 
 def get_id(_str):
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, str(_str)))

@@ -3,6 +3,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from utils.simple_utils import *
 from utils.google_utils import *
 from utils.langchain_utils import *
+from utils.best_hashtags import *
 
 from mongo.interface import *
 
@@ -140,8 +141,27 @@ def update_user_moments(user):
 
     return None
 
+
+def prepare_news_data(data):
+    topic, country_code = data
+
+    lang="en"
+
+    news_df = get_news_by_topic(topic, country=country_code, lang=lang)
+    
+    # Simple filter for where image or keywords do not exist
+    news_df = news_df[(news_df["top_image"] != "") & (news_df["keywords"] != "")]
+    news_df["country_code"] = [country_code] * len(news_df)
+
+    # parse dataframe into documents and metadata
+    documents, metadata = load_df(news_df)
+
+    return documents, metadata
+
 def get_general_news_data():
     global COUNTRY_CODES, NEWS_TOPICS
+
+    num_workers = int(os.environ["NUM_WORKERS"])
 
     collection_name = "general_news"
     lang="en"
@@ -155,19 +175,28 @@ def get_general_news_data():
 
     create_new_collection(chroma_reader, chroma_writer, collection_name)
 
-    for country_name, country_code in COUNTRY_CODES.items():
-        print("Gathering data for", country_name, country_code)
+    with Pool(num_workers) as pool:
+        for country_name, country_code in COUNTRY_CODES.items():
+            print("Gathering data for", country_name, country_code)
 
-        for topic in NEWS_TOPICS:
-            # get data from google news about the topic
-            news_df = get_news_by_topic(topic, country=country_code, lang=lang)
+            docs_and_meta = pool.map(prepare_news_data, [(topic, country_code) for topic in NEWS_TOPICS])
 
-            # Simple filter for where image or keywords do not exist
-            news_df = news_df[(news_df["top_image"] != "") & (news_df["keywords"] != "")]
-            news_df["country_code"] = [country_code] * len(news_df)
+            documents = []
+            metadata = []
 
-            # parse dataframe into documents and metadata
-            documents, metadata = load_df(news_df)
+            for d, m in docs_and_meta:
+                documents.extend(d)
+                metadata.extend(m)
+
+            # # get data from google news about the topic
+            # news_df = get_news_by_topic(topic, country=country_code, lang=lang)
+
+            # # Simple filter for where image or keywords do not exist
+            # news_df = news_df[(news_df["top_image"] != "") & (news_df["keywords"] != "")]
+            # news_df["country_code"] = [country_code] * len(news_df)
+
+            # # parse dataframe into documents and metadata
+            # documents, metadata = load_df(news_df)
 
             # embed and push vectors to chroma
             chroma_reader, chroma_writer = get_reader_writer(
@@ -178,7 +207,7 @@ def get_general_news_data():
             )
             chroma_writer.update(collection_name, documents, metadata)
 
-def prepare_data(data):
+def prepare_events_data(data):
     topic, target, country_code = data
     
     news_df = get_news_by_search(f"upcoming or ongoing major events about {topic}", limit=50, country=country_code)
@@ -197,7 +226,7 @@ def prepare_data(data):
 def get_current_events():
     global QUERY_TOPICS, COUNTRY_CODES
 
-
+    num_workers = int(os.environ["NUM_WORKERS"])
     collection_name = "current_events"
     target = "text"
 
@@ -210,51 +239,24 @@ def get_current_events():
 
     create_new_collection(chroma_reader, chroma_writer, collection_name)
 
-    data = []
-
     # for every country in the configuration run data extraction on all topics
-    with Pool(5) as pool:
+    with Pool(num_workers) as pool:
         for country_name, country_code in COUNTRY_CODES.items():
             
-            # docs_and_meta = pool.map(prepare_data, [(topic, target, country_code) for topic in QUERY_TOPICS])
-
-            docs_and_meta = pkl.load(open("test.pkl", "rb"))
+            docs_and_meta = pool.map(prepare_events_data, [(topic, target, country_code) for topic in QUERY_TOPICS])
 
             # get links for all the topics
             documents = []
             metadata = []
-            ids = []
 
-            for temp_data in docs_and_meta:
-                data = np.array(temp_data, dtype=object).T
-
-                ids.extend(list(map(lambda x: get_id(str(x[0])+str(x[1])), data)))
-                documents.extend(list(data.T[0]))
-                metadata.extend(list(data.T[1]))
-
-            temp = pd.DataFrame({
-                "ids": ids,
-                "documents": documents,
-                "metadata": metadata
-            })
-
-            print("Total documents:", len(temp))
-            temp.drop_duplicates("ids", inplace=True)
-            print("Total documents after removing duplicates:", len(temp))
-            
-            ids = temp["ids"].to_list()
-            documents = temp["documents"].to_list()
-            metadata = temp["metadata"].to_list()
-
-            chunked_ids = divide_chunks(ids, 1000)
-            chunked_documents = divide_chunks(documents, 1000)
-            chunked_metadata = divide_chunks(metadata, 1000)
+            for d, m in docs_and_meta:
+                documents.extend(d)
+                metadata.extend(m)
 
             # embed and push vectors to chroma
-            for ids, documents, metadata in zip(chunked_ids, chunked_documents, chunked_metadata):
-                chroma_writer.update(collection_name, documents, metadata, ids=ids)
+            chroma_writer.update(collection_name, documents, metadata)
 
-            exit(1)
+
 @sched.scheduled_job('cron', second="0", minute="0", hour="*/6", month="*", day="*", year="*")
 def job():
     # connect to MongoDB endpoint

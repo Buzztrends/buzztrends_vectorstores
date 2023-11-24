@@ -7,7 +7,6 @@ import os
 
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 
-
 def divide_chunks(l, n):
     for i in range(0, len(l), n): 
         yield l[i:i + n]
@@ -39,12 +38,16 @@ class Writer:
         """
         self.__client.create_collection(name=collection_name,embedding_function=self.__embedding_function,metadata=meta_data)
 
-    def update(self,collection_name:str,documents:list[str],metadata=None,max_retries=3,ids=None,filter_duplicates=True) -> None:
+    def update(self,collection_name:str,documents:list[str],metadata:list[dict]=None,max_retries:int=3,ids:list[str]=[],filter_duplicates:bool=True) -> None:
         """
         Add the provided documents to the given collection.
         Args:
             - collection_name:str, the name of the collection in which the documents will be added
             - docs: the documents to be added in collection
+            - metadata: the metadata to be added in collection
+            - max_retries: how many retries the function does to push documents to chroma
+            - ids: list of unique id values for every document
+            - filter_duplicates: indicates if the function to filter the input documents to remove duplicates
 
         Returns:
             - None
@@ -56,8 +59,13 @@ class Writer:
 
         count = 0
 
-        if ids == None:
-            ids = [get_id(str(d) + str(m)) for d, m in zip(documents, metadata)]
+        if ids == None or ids == []:
+            ids = []
+            for d, m in zip(documents, metadata):
+                m = m.copy()
+
+                m.pop("url", None)
+                ids.append(get_id(str(d) + str(m)))
 
         if filter_duplicates:
             temp = pd.DataFrame({

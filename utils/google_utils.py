@@ -86,7 +86,7 @@ def get_news_by_search(query, country="US", lang='en', limit=50):
     print(f"Getting headlines for {query}")
 
     for i, item in enumerate(tqdm(topic_heads["entries"][:limit+1])):
-        img_url, keywords, card_text = "", "", ""
+        img_url, keywords, card_text, description, text = "", "", "", "", ""
         
         try:
             article, (img_url, keywords, card_text, description, text) = parse_news_url(item["link"])

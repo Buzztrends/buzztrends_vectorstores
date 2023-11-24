@@ -20,11 +20,12 @@ import re
 from .simple_utils import *
 from .google_utils import *
 from .best_hashtags import *
-
+from .api_ninjas import *
 
 from chroma_interface.reader import *
 from chroma_interface.writer import *
 from chroma_interface import *
+
 
 
 MODELS = json.load(open("./config/openai-models.json", 'r'))
@@ -185,16 +186,33 @@ and so on
 
 
 def generate_current_events(company_description:str, chroma_reader:Reader, topic_list:list[str], country_code:str, llm_name:str="gpt-3") -> list[dict]:
+    query = f"List 5 important and interesting events related to any of these topics: {','.join(topic_list)}"
 
-    query = f"List 10 important and interesting events related to any of these topics: {','.join(topic_list)}"
+    print("getting holiday list")
+    holidays = str(get_holidays(country_code=country_code)["name"].to_list())
+    print(holidays)
 
+    print("Search relevant documents")
     relevant_docs = chroma_reader.search(query + company_description, 30, {"country_": country_code})
     relevant_docs_text = "\n".join([item.page_content.replace("\n", " ") for item in relevant_docs])
 
-    template = """Given the following context, I want you to answer this: {query}. Today's date {date}
+    template = """
+I am a marketing head and I am tasked to write social media content about big events around this date: {date}
+I am looking for important events to write some content (like Instagram post/reel, or Tiktok video, or Facebook post, or linkedin post, etc.).
+There is no specific topic that I am interested in, I write about general events/ideas.
+But I only write about events that have a massive reach within a country or worldwide (massive events in the specified is preferred).
+For example christmas which is celebrated all around the world, or diwali which is one of the biggest festivals in India, or grammy awards is the biggest music award show in the US, or FIFA world cup which is watched all over the world, etc.
+The above mentioned events are just examples that I would write content about.
 
-Context:
+Important details:
+Country that I am writing about: {country_code} (This is in the ISO 3166 alpha 2 format)
+Date: {date}, This is the date around which I want to write content.
+
+Important calendar events for country={country_code}: {holidays}
+
+I searched the internet about upcoming events, here is some data that you can use to suggest me what events I should write about:
 {context}
+
 
 Give me output in the following format only: 
 <event name>||<topic>||<short reason>
@@ -208,17 +226,19 @@ Instructions:
 4. Only give me events that having a positive sentiment.
 5. Events should be important on a global or a national scale, example: sporting events like cricket tournament, international conferences like G20 or BRICS, religious festival like christmas or eid, etc.
 6. Dont write numbering in the front
-7. Keep the items diverse, and prioritise events that have a large reach.
+7. Keep the items diverse, and prioritise events that have a larger reach.
 8. Do not repeat ideas. 
 """
 
-    prompt = PromptTemplate(template=template, input_variables=["query", "context", "date"])
+    prompt = PromptTemplate(template=template, input_variables=["query", "context", "date", "country_code", "holidays"])
     chain = LLMChain(prompt=prompt, llm=get_model(llm_name, temperature=0.2), output_key="events")
 
     output = chain({ 
         "query": query,
         "date": current_date(),
-        "context": relevant_docs_text
+        "context": relevant_docs_text,
+        "holidays": holidays,
+        "country_code": country_code
     })["events"]
 
     output = re.sub("(\n)+", "\n", output)

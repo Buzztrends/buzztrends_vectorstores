@@ -1,36 +1,44 @@
 from chromadb import HttpClient
-from langchain.vectorstores.chroma import Chroma
-from langchain.embeddings import OpenAIEmbeddings
 import os
+
+from langchain.docstore.document import Document
+
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 
 class Reader:
     
     def __init__(self,host:str, port:int, openai_api_key:str, collection:str=None) -> None:
-
-        try:
-            self.__client = HttpClient(host=host,port=port)
-            self.openai_api_key = openai_api_key
-        except ValueError:
-            raise Exception("Collection not found!!")
         
+        self.client = HttpClient(host=host,port=port)
+        self.openai_api_key = openai_api_key
+        self.embedding_function = OpenAIEmbeddingFunction(os.environ["OPENAI_API_KEY"])
+
         if collection:
             self.set_collection(collection)
 
-    def search(self,query,n=20,filter=None):
-        return self.collection.similarity_search(query=query, search_type="similarity", k=n, filter=filter)
-    
+    def search(self,query,n=20,filter:dict=None,keywords:list[str]=[],collection:str="") -> Document:
+        
+        where_documents = None
+
+        if collection != "":
+            self.set_collection(collection)
+
+        if keywords != []:
+            where_documents = {"$or":[{"$contains":item} for item in keywords]}
+
+        results = self.collection.query(query_texts=[query], n_results=n, where=filter, where_document=where_documents)
+        documents = results['documents'][0]
+        metadata = results['metadatas'][0]
+
+        data = [Document(page_content=d, metadata=m) for d, m in zip(documents, metadata)]
+
+        return data
+
     def set_collection(self, collection_name:str) -> None:
-        self.collection = Chroma(
-            client=self.__client,
-            collection_name=collection_name,
-            embedding_function=OpenAIEmbeddings(
-                openai_api_key=self.openai_api_key,
-                model="text-embedding-ada-002"
-            )
-        )
+        self.collection = self.client.get_or_create_collection(collection_name, embedding_function=self.embedding_function)
 
     def list_collections(self):
-        return self.__client.list_collections()
+        return self.client.list_collections()
 
     def filter_news(self, query:str, query_extension:str="", collection_name:str=None):
         query = query + "|" + query_extension

@@ -100,7 +100,7 @@ Only list the items as a set of comma seperated values, no numbering"""
     return get_news_by_search(news_topics_query, country=country)
 
 
-# -----------GENERATIVE RECCOMENDATION CHAINS----------
+# -----------GENERATIVE RECCOMENDATION CHAINS AND FILTERING----------
 def filter_news(query:str, chroma_reader:Reader, query_extension:str=""):
 
     query = query + "|" + query_extension
@@ -120,6 +120,20 @@ def filter_news(query:str, chroma_reader:Reader, query_extension:str=""):
         } for document in relevant_docs]
 
     return relevant_items
+
+
+def run_simple_query(context, query, llm_name="gpt-3", temperature=0.7):
+    template = """Given this context, answer this query: {query}
+
+{context}
+"""
+    prompt = PromptTemplate(template= template, input_variables=['query', 'context'])
+    chain = LLMChain(llm=get_model(llm_name, temperature=temperature), prompt=prompt, output_key='answer')
+
+    return chain({
+        "context": context,
+        'query': query
+        })['answer']
 
 
 def generate_social_media_trends(
@@ -185,7 +199,7 @@ and so on
     return data
 
 
-def generate_current_events(company_description:str, chroma_reader:Reader, topic_list:list[str], country_code:str, llm_name:str="gpt-3") -> list[dict]:
+def generate_current_events(company_description:str, chroma_reader:Reader, topic_list:list[str], keywords_dict:list[str], country_code:str, country:str, llm_name:str="gpt-3", temperature=0.2) -> list[dict]:
     query = f"List 5 important and interesting events related to any of these topics: {','.join(topic_list)}"
 
     print("getting holiday list")
@@ -193,26 +207,70 @@ def generate_current_events(company_description:str, chroma_reader:Reader, topic
     print(holidays)
 
     print("Search relevant documents")
-    relevant_docs = chroma_reader.search(query + company_description, 30, {"country_": country_code})
+    relevant_docs = []
+    for topic in tqdm(topic_list):
+
+        keywords = keywords_dict[topic]
+        query = f"{topic} important events in {country} around the date {current_date()}"
+
+        relevant_docs.extend(chroma_reader.search(
+            query=query,
+            n=5,
+            filter={"country_code":country_code},
+            keywords=keywords
+        ))
     relevant_docs_text = "\n".join([item.page_content.replace("\n", " ") for item in relevant_docs])
 
+#     template = """
+# I am a marketing head and I am tasked to write social media content about big events around this date: {date}
+# I am looking for important events to write some content (like Instagram post/reel, or Tiktok video, or Facebook post, or linkedin post, etc.).
+# There is no specific topic that I am interested in, I write about general events/ideas.
+# But I only write about events that have a massive reach within a country or worldwide (massive events in the specified is preferred).
+# For example christmas which is celebrated all around the world, or diwali which is one of the biggest festivals in India, or grammy awards is the biggest music award show in the US, or FIFA world cup which is watched all over the world, etc.
+# The above mentioned events are just examples that I would write content about.
+
+# Important details:
+
+# Country that I am writing about: {country}
+
+# Date: {date}, This is the date around which I want to write content.
+
+# Important calendar events for {country}: {holidays} (These have priority)
+
+# I searched the internet about upcoming events, here is some data that you can use to suggest me what events I should write about:
+# {context}
+
+# VERY IMPORTANT:
+# 1) DO NOT TELL ME ABOUT PRODUCTS OR SERVICES OF OTHER COMPANYS, NOR TELL ME THAT THERE ARE ANY SALES BECAUSE OF SOME FESTIVAL. 
+
+# 2) ONLY LIST THOSE EVENTS THAT ARE GLOBALLY RELEVANT (EG. CHRISTMAS) OR RELEVANT TO {country} (LIKE CRICKET TO INDIA). 
+# IF YOU TELL ME EVENTS THAT ARE NOT RELEVANT GLOBALLY OR TO {country} THEN I CANNOT WRITE ABOUT IT AND MY TIME, EFFORT AND MONEY WILL BE WASTED.
+
+# 3) I HAVE GIVEN YOU A LIST OF CALANDAR EVENTS FOR {country}, THOSE HAVE A HIGHER PRIORITY.
+
+# Give me output in the following format only: 
+# <event name>||<topic>||<short reason>
+# <event name>||<topic>||<short reason>
+# and so on
+# """
+
     template = """
-I am a marketing head and I am tasked to write social media content about big events around this date: {date}
+I am a marketing head and I am tasked to write social media content about big events around this date: {date} or within the next month from this date.
 I am looking for important events to write some content (like Instagram post/reel, or Tiktok video, or Facebook post, or linkedin post, etc.).
 There is no specific topic that I am interested in, I write about general events/ideas.
 But I only write about events that have a massive reach within a country or worldwide (massive events in the specified is preferred).
 For example christmas which is celebrated all around the world, or diwali which is one of the biggest festivals in India, or grammy awards is the biggest music award show in the US, or FIFA world cup which is watched all over the world, etc.
-The above mentioned events are just examples that I would write content about.
+The above mentioned events are just examples that I would write content about.    
 
-Important details:
-Country that I am writing about: {country_code} (This is in the ISO 3166 alpha 2 format)
-Date: {date}, This is the date around which I want to write content.
+Given the following context, I want you to answer this: {query}. 
 
-Important calendar events for country={country_code}: {holidays}
-
-I searched the internet about upcoming events, here is some data that you can use to suggest me what events I should write about:
+Context:
 {context}
 
+Calendar events:
+{holidays}
+
+tell me about events relevant to {country}
 
 Give me output in the following format only: 
 <event name>||<topic>||<short reason>
@@ -220,26 +278,29 @@ Give me output in the following format only:
 and so on
 
 Instructions:
-1. The order of events should represent how engaging the event might be.
-2. Do not restrict the events to only one or two categories like sports or film, there should be multiple categories if possible.
-3. List only those events that are currently going on, going to happen in 1 month, or have happened within 1 month of today's date.
-4. Only give me events that having a positive sentiment.
-5. Events should be important on a global or a national scale, example: sporting events like cricket tournament, international conferences like G20 or BRICS, religious festival like christmas or eid, etc.
-6. Dont write numbering in the front
-7. Keep the items diverse, and prioritise events that have a larger reach.
-8. Do not repeat ideas. 
+* If there are important calendar events (like national day or a big religious festival) then always include those in your answer
+* The order of events should represent how engaging the event might be.
+* Do not restrict the events to only one or two categories like sports or film, there should be multiple categories if possible.
+* List only those events that are currently going on, going to happen in 1 month, or have happened within 1 month of today's date.
+* Only give me events that are positive.
+* Events should be important on a global scale, example: sporting events, or international conferences like G20.
+* Dont write numbering in the front
+* Keep the items diverse, and prioritise events that have a large reach.
 """
 
-    prompt = PromptTemplate(template=template, input_variables=["query", "context", "date", "country_code", "holidays"])
-    chain = LLMChain(prompt=prompt, llm=get_model(llm_name, temperature=0.2), output_key="events")
+    prompt = PromptTemplate(template=template, input_variables=["query", "date", "context", "country", "holidays"])
+    chain = LLMChain(prompt=prompt, llm=get_model(llm_name, temperature=temperature), output_key="events")
 
     output = chain({ 
         "query": query,
         "date": current_date(),
         "context": relevant_docs_text,
-        "holidays": holidays,
-        "country_code": country_code
+        "holidays": ",".join(holidays),
+        "country": country
     })["events"]
+
+    # print(relevant_docs_text)
+    print(output)
 
     output = re.sub("(\n)+", "\n", output)
 

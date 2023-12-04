@@ -19,17 +19,29 @@ import time
 import pickle as pkl
 import pandas as pd
 import numpy as np
+import json
 
 sched = BlockingScheduler()
 
 
 # Constants
 NEWS_TOPICS = read_lines_from_file("./config/topic-type.txt")
-QUERY_TOPICS = read_lines_from_file("./config/query-topics.txt")
+
 COUNTRY_NAMES = read_lines_from_file("./config/countries-names.txt")
 COUNTRY_CODES = defaultdict(None)
 for name, code in zip(COUNTRY_NAMES, read_lines_from_file("./config/countries-code.txt")):
     COUNTRY_CODES[name] = code
+
+COUNTRY_CODES_TO_NAMES = defaultdict(None)
+for name, code in zip(COUNTRY_NAMES, read_lines_from_file("./config/countries-code.txt")):
+    COUNTRY_CODES_TO_NAMES[code] = name
+
+QUERY_KEYWORDS_DICT = json.load(open("./config/query-topics.json", 'r'))
+QUERY_TOPICS = list(QUERY_KEYWORDS_DICT.keys())
+
+QUERY_KEYWORDS = []
+for item in QUERY_KEYWORDS_DICT.values():
+    QUERY_KEYWORDS.extend(item)
 
 def update_user_moments(user):
     global QUERY_TOPICS
@@ -43,7 +55,7 @@ def update_user_moments(user):
     company_description = user["company_description"]
     country = user["country"]
     country_code = user["country_code"]
-    country_name = user["country"]
+    country = user["country"]
     content_category = user['content_category']
 
     print("updating", company_name)
@@ -114,7 +126,13 @@ def update_user_moments(user):
 
     chroma_reader.set_collection(collection_name)
 
-    current_events_moments = generate_current_events(company_description, chroma_reader, QUERY_TOPICS, country_code)[:news_limit]
+    current_events_moments = generate_current_events(
+        company_description=company_description, 
+        chroma_reader=chroma_reader, 
+        topic_list=QUERY_TOPICS, 
+        keywords_dict=QUERY_KEYWORDS_DICT, 
+        country_code=country_code,
+        country=country)[:news_limit]
 
     print({
         "general_news": general_news_moments,
@@ -276,7 +294,7 @@ def job():
     # Create personalized industry news for every user
     userlist = user_mongo_client.get_user_list()
 
-    with Pool(5) as pool:
+    with Pool(1) as pool:
         [item for item in pool.imap(update_user_moments, userlist)]
 
 if __name__ == "__main__":
@@ -299,4 +317,4 @@ if __name__ == "__main__":
 
     job()
     
-    sched.start()
+    # sched.start()

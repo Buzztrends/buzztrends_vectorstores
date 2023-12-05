@@ -101,11 +101,16 @@ Only list the items as a set of comma seperated values, no numbering"""
 
 
 # -----------GENERATIVE RECCOMENDATION CHAINS AND FILTERING----------
-def filter_news(query:str, chroma_reader:Reader, query_extension:str=""):
+def filter_news(query:str, chroma_reader:Reader, country_code:str="", query_extension:str=""):
 
-    query = query + "|" + query_extension
+    query = query# + "|" + query_extension
 
-    relevant_docs = chroma_reader.search(query)
+    _filter = None
+
+    if not (country_code == "" or country_code == None):
+        _filter={"country_code":country_code}
+
+    relevant_docs = chroma_reader.search(query, filter=_filter)
 
     relevant_items = [{
             "title": document.page_content,

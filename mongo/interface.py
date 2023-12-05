@@ -56,6 +56,9 @@ class MongoInterface:
             "saved_items": saved_items,
             "last_5_generations": last_5_generations
         })
+    
+    def get_user(self, _id):
+        return self.client.find_one({"company_id":_id})
 
     def update_user_moments(self, _id, moments):
         """

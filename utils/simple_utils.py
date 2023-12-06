@@ -22,6 +22,7 @@ import pandas as pd
 import bs4
 
 nltk.download('stopwords')
+nltk.download('punkt')
 
 def divide_chunks(l, n):
     for i in range(0, len(l), n): 

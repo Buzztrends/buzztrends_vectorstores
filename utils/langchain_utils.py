@@ -197,7 +197,7 @@ and so on
             "title": title,
             "reason": reason,
             "validation": {
-                "hashtag": get_hashtag_data(hashtag) # add best-hashtags function
+                "hashtag": process_for_hashtags(title) # add best-hashtags function
             }
         })
 

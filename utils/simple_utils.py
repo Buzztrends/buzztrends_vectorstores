@@ -9,15 +9,38 @@ from pprint import pprint
 from pygooglenews import GoogleNews
 from collections import defaultdict
 from newspaper import Article
+from nltk import ngrams, word_tokenize
+from nltk import ngrams, word_tokenize
+from nltk.corpus import stopwords
+from difflib import SequenceMatcher
 
+
+import nltk
 import newspaper
 import requests
 import pandas as pd
 import bs4
 
+nltk.download('stopwords')
+
 def divide_chunks(l, n):
     for i in range(0, len(l), n): 
+
         yield l[i:i + n]
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+def grams(string):
+    string = string.replace("#", "")
+    
+    length = len(string.split())
+
+    ngrams_data = []
+    for i in range(length+1):
+        ngrams_data.extend(ngrams(word_tokenize(string), i))
+
+    return ["".join(item).lower() for item in ngrams_data]
 
 
 def extract_text_from(url):

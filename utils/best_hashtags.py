@@ -1,6 +1,7 @@
 import requests
 import bs4
 
+from .simple_utils import *
 
 def process_data(data):
     if data[0] == []:
@@ -188,4 +189,18 @@ def get_hashtag_data(query:str):
         "None": 0
     }
 
-    
+def process_for_hashtags(string, similarity_threshold=0.35):
+    hashtag_queries = grams(string)
+
+    hashtag_data = {}
+
+    for query in hashtag_queries:
+        hashtag_data.update(get_hashtag_data(query))
+
+    hashtag_data.pop('None', None)
+
+    hashtag_data = pd.Series(hashtag_data)
+    hashtag_data.sort_values(ascending=False, inplace=True)
+    hashtag_data = hashtag_data[(pd.Series(map(lambda x: similar(string.replace(" ", "").lower(), x), hashtag_data.index)) > similarity_threshold).values]
+
+    return hashtag_data.to_dict()

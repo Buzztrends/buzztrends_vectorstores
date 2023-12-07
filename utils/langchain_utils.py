@@ -1,7 +1,7 @@
 # langchain imports
 import langchain
-from langchain.llms import OpenAI
-from langchain.chat_models import ChatOpenAI
+from langchain.llms import OpenAI,AzureOpenAI
+from langchain.chat_models import ChatOpenAI,AzureChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain, SequentialChain, RetrievalQA, ConversationalRetrievalChain, VectorDBQA, ChatVectorDBChain
 from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
@@ -77,8 +77,16 @@ def split_df(df:pd.DataFrame, target:str) -> tuple[list[str], list[dict]]:
 
 # -------------MODEL INTERACTIONS-----------------------
 def get_model(model_name='gpt-3', temperature=0.7):
-    return ChatOpenAI(model=MODELS[model_name], temperature=temperature)
-
+    if model_name == 'gpt-4':
+        return ChatOpenAI(model=MODELS[model_name], temperature=temperature)
+    elif model_name == 'gpt-3-openai':
+        return ChatOpenAI(model=MODELS[model_name], temperature=temperature)
+    elif model_name=='gpt-3.5-azure':
+        return AzureChatOpenAI(openai_api_key=os.environ["AZURE_OPENAI_KEY"],openai_api_base=os.environ["AZURE_OPENAI_API_BASE"],deployment_name="buzztrends-gpt35-turbo16k",openai_api_version=os.environ["AZURE_OPENAI_API_VERSION"],temperature=temperature),
+    elif model_name == 'gpt-3.5-instruct-azure':
+        return AzureOpenAI(openai_api_key=os.environ["AZURE_OPENAI_KEY"],openai_api_base=os.environ["AZURE_OPENAI_API_BASE"],deployment_name="buzztrends-gpt35-turbo-instruct",openai_api_version=os.environ["AZURE_OPENAI_API_VERSION"],temperature=temperature)
+    else:
+        return "Undefine model name provided"
 
 # --------------RECCOMENDATION CHAINTS------------------
 def news_from_query(query, country="IN", llm_name="gpt-3"):

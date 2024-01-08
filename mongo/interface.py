@@ -60,6 +60,9 @@ class MongoInterface:
     def get_user(self, _id):
         return self.client.find_one({"company_id":_id})
 
+    def get_user_yield(self, _id):
+        yield self.client.find_one({"company_id":_id})
+
     def update_user_moments(self, _id, moments):
         """
         Update the moments for a user

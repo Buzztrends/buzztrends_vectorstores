@@ -20,7 +20,7 @@ import time
 # for name, code in zip(COUNTRY_NAMES, read_lines_from_file("./config/countries-code.txt")):
 #     COUNTRY_CODES[name] = code
 
-
+61176207,32575585
 # environment setup
 with open(".env", "r") as key_file:
     keys = list(key_file)
@@ -43,9 +43,19 @@ user_mongo_client = MongoInterface(
 
 
 if __name__ == "__main__":
-    print("Updating user moments")
-    # Create personalized industry news for every user
-    userlist = user_mongo_client.get_user_list()[:]
 
-    with Pool(1) as pool:
+    user_idx = input("User ids ('a' for all): ")
+
+
+
+
+    if user_idx == 'a':
+        # Create personalized industry news for every user
+        userlist = user_mongo_client.get_user_list()[:]
+    else:
+        user_idx = list(map(int, user_idx.split(',')))
+        userlist = map(user_mongo_client.get_user, user_idx)
+    print("Updating user moments")
+
+    with Pool(int(os.environ["NUM_WORKERS"])) as pool:
         [item for item in pool.imap(update_user_moments, userlist)]

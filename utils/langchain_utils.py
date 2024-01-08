@@ -76,25 +76,29 @@ def split_df(df:pd.DataFrame, target:str) -> tuple[list[str], list[dict]]:
 
 
 # -------------MODEL INTERACTIONS-----------------------
-def get_model(model_name='gpt-3', temperature=0.7):
+def get_model(model_name='gpt-3.5-azure', temperature=0.7):
     if model_name == 'gpt-4':
         return ChatOpenAI(model=MODELS[model_name], temperature=temperature)
     elif model_name == 'gpt-3-openai':
         return ChatOpenAI(model=MODELS[model_name], temperature=temperature)
     elif model_name=='gpt-3.5-azure':
-        return AzureChatOpenAI(openai_api_key=os.environ["AZURE_OPENAI_KEY"],openai_api_base=os.environ["AZURE_OPENAI_API_BASE"],deployment_name="buzztrends-gpt35-turbo16k",openai_api_version=os.environ["AZURE_OPENAI_API_VERSION"],temperature=temperature),
+        # return AzureChatOpenAI(openai_api_key=os.environ["AZURE_OPENAI_KEY"],openai_api_base=os.environ["AZURE_OPENAI_API_BASE"],deployment_name="buzztrends-gpt35-turbo16k",openai_api_version=os.environ["AZURE_OPENAI_API_VERSION"],temperature=temperature),
+        return AzureOpenAI(openai_api_key=os.environ["AZURE_OPENAI_KEY"],openai_api_base=os.environ["AZURE_OPENAI_API_BASE"],deployment_name="buzztrends-gpt35-turbo-instruct",openai_api_version=os.environ["AZURE_OPENAI_API_VERSION"],temperature=temperature)
+
     elif model_name == 'gpt-3.5-instruct-azure':
         return AzureOpenAI(openai_api_key=os.environ["AZURE_OPENAI_KEY"],openai_api_base=os.environ["AZURE_OPENAI_API_BASE"],deployment_name="buzztrends-gpt35-turbo-instruct",openai_api_version=os.environ["AZURE_OPENAI_API_VERSION"],temperature=temperature)
     else:
-        return "Undefine model name provided"
+        print("Undefine model name provided")
+        return None
 
 # --------------RECCOMENDATION CHAINTS------------------
-def news_from_query(query, country="IN", llm_name="gpt-3"):
+def news_from_query(query, country="IN", llm_name="gpt-3.5-azure"):
     industry = query.split("|")[0]
     company_description = query.split("|")[1]
     news_topic_template = """What are the top 10 topic related to the {query} industry and a company with this description:
 {description}
-Only list the items as a set of comma seperated values, no numbering"""
+Only list the items as a set of comma seperated values, EG: <topic>,<topic>,...
+NO NUMBERINGS"""
     news_topic_prompt = PromptTemplate(template=news_topic_template, input_variables=['query', 'description'])
     news_topic_chain = LLMChain(llm=get_model(llm_name), prompt=news_topic_prompt, output_key="news_topics")
 
@@ -135,7 +139,7 @@ def filter_news(query:str, chroma_reader:Reader, country_code:str="", query_exte
     return relevant_items
 
 
-def run_simple_query(context, query, llm_name="gpt-3", temperature=0.7):
+def run_simple_query(context, query, llm_name="gpt-3.5-azure", temperature=0.7):
     template = """Given this context, answer this query: {query}
 
 {context}
@@ -152,7 +156,7 @@ def run_simple_query(context, query, llm_name="gpt-3", temperature=0.7):
 def generate_social_media_trends(
         content_category:str, 
         chroma_reader:Reader, 
-        llm_name:str="gpt-3") -> list[dict]:
+        llm_name:str="gpt-3.5-azure") -> list[dict]:
 
     llm = get_model(llm_name, temperature=1)
 
@@ -212,7 +216,7 @@ and so on
     return data
 
 
-def generate_current_events(company_description:str, chroma_reader:Reader, topic_list:list[str], keywords_dict:list[str], country_code:str, country:str, llm_name:str="gpt-3", temperature=0.2) -> list[dict]:
+def generate_current_events(company_description:str, chroma_reader:Reader, topic_list:list[str], keywords_dict:list[str], country_code:str, country:str, llm_name:str="gpt-3.5-azure", temperature=0.2) -> list[dict]:
     query = f"List 5 important and interesting events related to any of these topics: {','.join(topic_list)}"
 
     print("getting holiday list")

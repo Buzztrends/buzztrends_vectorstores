@@ -81,7 +81,7 @@ def update_user_moments(user):
 
     create_new_collection(chroma_reader, chroma_writer, collection_name)
 
-    news_df = news_from_query(content_category + "|" + company_description, country=country_code)
+    news_df = news_from_query(content_category + "|" + company_description, country=country_code, llm_name="gpt-3-openai")
     news_df = news_df[(news_df["top_image"] != "") & (news_df["keywords"] != "")]
     news_df["country_code"] = [country_code] * len(news_df)
 
